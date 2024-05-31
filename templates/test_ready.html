@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>가상면접 준비</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  </head>
+  <style>
+    body {
+      background-color: #f2f7f3;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .form-container {
+      text-align: center; /* Center the content */
+      width: 90%;
+      max-width: 1200px;
+      padding: 20px;
+      background-color: white;
+      border-radius: 20px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .wrap {
+      display: flex;
+      flex-direction: row; /* 가로로 요소들을 정렬 */
+      justify-content: flex-start; /* 요소들을 왼쪽으로 정렬하여 간격을 최소화 */
+      align-items: center; /* 요소들을 수직으로 가운데 정렬 */
+      margin-bottom: 15px; /* 요소들 아래 간격 설정 */
+    }
+
+    .button {
+      width: 140px;
+      height: 45px;
+      font-family: 'Roboto', sans-serif;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      font-weight: 500;
+      color: #000;
+      background-color: #f6f8f7;
+      border: none;
+      border-radius: 45px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease 0s;
+      cursor: pointer;
+      outline: none;
+      margin-top: 20px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .button:hover {
+      background-color: #6ab1f7;
+      box-shadow: 0px 0px 0px rgba(46, 229, 157, 0.4);
+      color: #fff;
+      transform: translateY(-7px);
+    }
+
+    .image-container {
+      text-align: center;
+      width: 100%; /* 비디오 컨테이너의 너비를 조정 */
+      margin-bottom: 20px;
+    }
+
+    .image {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto; /* Center the webcam */
+    }
+    video {
+      width: 90%; /* 비디오 요소의 너비를 조정 */
+      max-width: 900px; /* 비디오 요소의 최대 너비를 설정 */
+      height: auto; /* 비디오의 세로 비율을 유지하면서 너비에 맞게 조정 */
+    }
+
+    .test_ready,
+    .test_start,
+    .test_result {
+      flex: 1; /* Equal width for all paragraphs */
+      margin: 10; /* Remove default margin */
+      font-weight: bold; /* Make text bold */
+      letter-spacing: 0px; /* Reduce letter spacing */
+      text-align: center; /* Center align the text */
+      background-color: #f3f6f4;
+    }
+
+    .test_ready {
+      color: #4b47df; /* Change color for text 1 */
+      font-size: 30px; /* Increase font size */
+    }
+
+    .test_start {
+      color: #b7c2fa; /* Change color for text 2 */
+      font-size: 30px; /* Increase font size */
+    }
+
+    .test_result {
+      color: #b7c2fa; /* Change color for text 3 */
+      font-size: 30px; /* Increase font size */
+    }
+
+    /* Modal Style */
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1; /* Sit on top */
+      left: 0;
+      top: 0;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+    }
+
+    /* Modal Close Button */
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    /* Modal Content */
+    .modal-content {
+      background-color: #f8f9fb;
+      border: 1px solid #888;
+      width: 450px; /* Set width to desired size */
+      height: 300px; /* Set height to match width for square modal */
+      border-radius: 10px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center; /* Center align the content */
+      font-size: 16px;
+    }
+
+    .main-content {
+      display: flex;
+      justify-content: space-between; /* 공간을 최대한 활용 */
+      align-items: flex-start; /* 상단 정렬 */
+    }
+
+    .text-content {
+      width: 95%; /* 텍스트 컨텐츠의 너비 조정 */
+      text-align: center; /* 텍스트를 왼쪽 정렬 */
+      line-height: 2; /* 줄 간격 조정 */
+      padding: 13px; /* Padding around the text */
+      border: 1px solid #ddd; /* Border around the text */
+      border-radius: 10px; /* Rounded corners */
+      margin: 10px;
+    }
+    hr {
+      width: 70%;
+    }
+  </style>
+  <body>
+    <div class="form-container">
+      <div class="wrap">
+        <p class="test_ready"><u>면접 테스트 환경 설정</u></p>
+        <p class="test_start">테스트 진행</p>
+        <p class="test_result">테스트 결과</p>
+      </div>
+
+      <div class="main-content">
+        <div class="image-container" id="webcam-container"></div>
+        <div class="text-content">
+          <br />
+          본 페이지는 마이크와 카메라가 제대로 작동하고 있는지 확인하는
+          단계입니다. <br /><br />
+          마이크를 연결 한 후, 소리를 내어 잘 작동하고 있는지 확인하세요. <br />
+          가상 면접시에는 본인의 목소리가 들리지않고 녹음만 진행됩니다.
+          <br /><br />
+          사용자의 면접 환경은 너무 밝지 않아야 하며, <br />
+          카메라는 평평한곳에 두고 고정시켜야 합니다. <br />
+          카메라를 면접관이라 생각하고 최대한 정면을 응시하면서 <br />
+          질문에 답하는것이 좋습니다.
+        </div>
+      </div>
+      <button onclick="openModal()" class="button" style="color: #000000">
+        <b>테스트 시작하기</b>
+      </button>
+    </div>
+
+    <div id="myModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <pre>
+
+
+<B>가상 면접 사용법</B>
+
+<hr />
+5초의 생각할 시간을 가진후
+20초 동안 답변 하는 시간이 주어집니다.
+3개의 질문이 제시 됩니다.
+
+준비가 되었다면 확인을 눌러 면접을 시작하세요.
+<button onclick="redirectToTestStart()" class="button" style="color: #000000;"><B>확인</B></button>
+            </pre>
+      </div>
+    </div>
+
+    <script>
+      function redirectToTestStart() {
+        window.location.href = '/test_start';
+      }
+
+      function openModal() {
+        var modal = document.getElementById('myModal');
+        modal.style.display = 'block';
+      }
+
+      function closeModal() {
+        var modal = document.getElementById('myModal');
+        modal.style.display = 'none';
+      }
+
+      // 웹캠 및 마이크 설정
+      async function getWebcamStream() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+          const webcamContainer = document.getElementById('webcam-container');
+          const videoElement = document.createElement('video');
+          videoElement.autoplay = true;
+          videoElement.srcObject = stream;
+          webcamContainer.appendChild(videoElement);
+          return stream;
+        } catch (error) {
+          console.error('Error accessing webcam:', error);
+        }
+      }
+
+      // Function to record audio stream
+      async function recordAudioStream() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          // Do something with the stream if needed, or just keep it without using
+          return stream;
+        } catch (error) {
+          console.error('Error accessing microphone:', error);
+        }
+      }
+
+      window.onload = async function () {
+        const webcamStream = await getWebcamStream();
+        const audioStream = await recordAudioStream();
+        // Do something with the streams if needed, or just keep them without using
+      };
+    </script>
+  </body>
+</html>

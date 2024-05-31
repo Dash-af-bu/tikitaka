@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>가상면접 시작</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recorderjs/0.1.0/recorder.js"></script>
+</head>
+<style>
+    body {
+        background-color: #F2F7F3;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .form-container {
+        text-align: center; /* Center the content */
+        width: 90%;
+        max-width: 1200px;
+        padding: 20px;
+        background-color: white;
+        border-radius: 20px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .wrap {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .button {
+        width: 140px;
+        height: 45px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 2.5px;
+        font-weight: 500;
+        color: #000;
+        background-color: #f3f6f4;
+        border: none;
+        border-radius: 45px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease 0s;
+        cursor: pointer;
+        outline: none;
+        margin-top: 20px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .button:hover {
+        background-color: #6ab1f7;
+        box-shadow: 0px 0px 0px rgba(46, 229, 157, 0.4);
+        color: #fff;
+        transform: translateY(-7px);
+    }
+
+    .image-container {
+        text-align: center;
+        width: 100%; /* 비디오 컨테이너의 너비를 조정 */
+        margin-bottom: 20px;
+        
+    }
+
+    .image {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
+
+    video {
+        width: 100%;
+        max-width: 600px;
+        height: auto;
+    }
+
+    .test_ready, .test_start, .test_result, .question {
+        flex: 1;
+        margin: 10;
+        font-weight: bold;
+        letter-spacing: 0px;
+        text-align: center;
+        background-color: #f3f6f4 ;
+
+    }
+
+    .test_ready {
+        color: #b7c2fa; /* Change color for text 1 */
+        font-size: 30px; /* Increase font size */
+    }
+
+    .test_start {
+        color: #4b47df; /* Change color for text 2 */
+        font-size: 30px; /* Increase font size */
+    }
+
+    .test_result {
+        color: #b7c2fa; /* Change color for text 3 */
+        font-size: 30px; /* Increase font size */
+    }
+
+    .question {
+        background-color: #f5f5f5;
+        padding: 10px;
+        border-radius: 10px;
+        font-size: 24px;
+
+    }
+
+    .countdown {
+        background-color: #fbfbfb;
+        padding: 2px;
+        border-radius: 10px;
+        font-size: 25px;
+        width: 200px;
+        margin: 0 auto; /* 가운데 정렬 */
+        
+    }
+
+
+    .countdown .time {
+        font-size: 40px;
+        color: red;
+    }
+
+    .form-container .wrap.questions {
+        background-color: #fff;
+        padding: 0px;
+        border-radius: 10px;
+        height: 5px;
+    }
+</style>
+
+<body>
+    <div class="form-container">
+        <div class="wrap">
+            <p class="test_ready">면접 테스트 환경 설정</p>
+            <p class="test_start"><u>테스트 진행</u></p>
+            <p class="test_result">테스트 결과</p>
+            <br>
+        </div>
+        <div class="wrap questions">
+            <p class="question" id="question"></p>
+        </div>
+        <div>
+            <br><p id="countdown" class="countdown"><b><span class="status">생각중</b></span><span class="time"> 5초</span></p>
+        </div>
+        <div class="image-container" id="webcam-container">
+            <br><video id="webcam" autoplay playsinline width="640" height="480"></video>
+        </div>
+        <button onclick="stopRecordingAndSave(); redirectToTestResult();" id="okButton" class="button" style="display: none;"><b>가상면접 마치기</b></button>
+        
+        <!-- 얼굴 인식 버튼 삭제 -->
+        
+        <!-- 얼굴 인식 결과 표시 -->
+        <div id="faceDetectionResult" style="text-align: center; margin-top: 20px;">
+            <h3>얼굴 인식이 진행 중입니다...</h3>
+        </div>
+    </div>
+    
+    <script>
+        const THINKING_TIME = 5;
+        const ANSWERING_TIME = 20;
+        const TOTAL_QUESTIONS = 3;
+        const RECORD_INTERVAL = 75000; 
+        let countdown = THINKING_TIME;
+        let countdownType = "thinking";
+        let questionCounter = 0;
+        let recorder;
+        let gumStream;
+        let audioContext;
+        let recordedBlobs = [];
+        let isSaving = false;
+        let collectedFrames = [];
+        let faceDetectionInterval;
+        const FACE_DETECTION_DURATION = 40000; 
+
+        const questions = [
+            "간단한 자기소개를 해주세요.",
+            "이 회사에 지원하게 된 이유는 무엇인가요?",
+            "본인의 강점은 무엇이라고 생각하나요?"
+        ];
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                gumStream = stream;
+                const input = audioContext.createMediaStreamSource(stream);
+                recorder = new Recorder(input, { numChannels: 1 });
+                recorder.record();
+                console.log('Recording started...');
+
+                setTimeout(stopRecordingAndSave, RECORD_INTERVAL); // 3분 30초 후 녹음 중지 및 저장
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+            }
+        }
+
+        function stopRecordingAndSave() {
+            if (recorder && !isSaving) {
+                isSaving = true; // 중복 호출 방지
+                recorder.stop();
+                gumStream.getAudioTracks()[0].stop();
+                console.log('Recording stopped.');
+                recorder.exportWAV(blob => {
+                    recordedBlobs.push(blob);
+                    saveRecording();
+                    isSaving = false; // 저장 완료 후 플래그 초기화
+                });
+            } else {
+                console.log('Recording was not in progress or is already saving.');
+            }
+        }
+
+        function saveRecording() {
+            if (recordedBlobs.length === 0) {
+                console.error('녹음된 데이터가 없습니다.');
+                return;
+            }
+
+            const combinedBlob = new Blob(recordedBlobs, { type: 'audio/wav' });
+
+            let a = document.getElementById('downloadLink');
+            if (a) {
+                document.body.removeChild(a);
+            }
+
+            const url = URL.createObjectURL(combinedBlob);
+            a = document.createElement('a');
+            a.id = 'downloadLink';
+            document.body.appendChild(a);
+            a.style = 'display: none';
+            a.href = url;
+            a.download = 'audio.wav';
+            a.click();
+
+            localStorage.setItem("recordedAudioURL", url);
+
+            window.URL.revokeObjectURL(url);
+
+            recordedBlobs = [];
+        }
+
+        function redirectToTestResult() {
+            window.location.href = "/test_result";
+        }
+
+        async function getWebcamStream() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                const video = document.getElementById('webcam');
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    startFaceDetection(); // 스트림이 준비되면 얼굴 인식을 시작합니다.
+                };
+                return stream;
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+            }
+        }
+
+        async function startFaceDetection() {
+            const video = document.getElementById('webcam');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            
+            faceDetectionInterval = setInterval(() => {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataURL = canvas.toDataURL('image/jpeg');
+                collectedFrames.push(dataURL);
+            }, 500); // 1초마다 프레임 수집
+
+            setTimeout(() => {
+                clearInterval(faceDetectionInterval);
+                sendCollectedFrames();
+            }, FACE_DETECTION_DURATION);
+        }
+
+        async function sendCollectedFrames() {
+            const response = await fetch('/detect_face', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ images: collectedFrames }),
+            });
+
+            const result = await response.json();
+            console.log(result);
+            // 서버에 저장되므로 결과를 여기서 처리하지 않습니다.
+        }
+
+        function displayNextQuestion() {
+            if (questionCounter < questions.length) {
+                document.getElementById('question').textContent = questions[questionCounter];
+                questionCounter++;
+            }
+        }
+
+        function displayAnsweringMessage() {
+            document.getElementById('countdown').querySelector('.status').textContent = "답변중";
+            document.getElementById('countdown').querySelector('.time').textContent = ` ${ANSWERING_TIME}초`;
+        }
+
+        function displayThinkingMessage() {
+            document.getElementById('countdown').querySelector('.status').textContent = "생각중";
+            document.getElementById('countdown').querySelector('.time').textContent = ` ${THINKING_TIME}초`;
+        }
+
+        const intervalId = setInterval(() => {
+            countdown--;
+
+            if (countdown === 0) {
+                if (countdownType === "thinking") {
+                    countdown = ANSWERING_TIME;
+                    countdownType = "answering";
+                    displayAnsweringMessage();
+                } else if (countdownType === "answering") {
+                    countdown = THINKING_TIME;
+                    countdownType = "thinking";
+                    displayThinkingMessage();
+                    if (questionCounter < TOTAL_QUESTIONS) {
+                        displayNextQuestion();
+                    } else {
+                        clearInterval(intervalId);
+                        document.getElementById('countdown').querySelector('.status').textContent = "테스트 완료";
+                        document.getElementById('countdown').querySelector('.time').textContent = "";
+                        setTimeout(() => {
+                            document.getElementById('okButton').style.display = 'block';
+                        }, 5000);
+                    }
+                }
+            } else {
+                document.getElementById('countdown').querySelector('.time').textContent = ` ${countdown}초`;
+            }
+        }, 1000);
+
+        document.addEventListener("DOMContentLoaded", async function() {
+            await getWebcamStream(); // 페이지 로드 시 웹캠 스트림 시작
+            startRecording(); // 페이지 로드 시 자동으로 녹음 시작
+            displayNextQuestion(); // 첫 번째 질문을 바로 표시
+        });
+    </script>
+</body>
+</html>

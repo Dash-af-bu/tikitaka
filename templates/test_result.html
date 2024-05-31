@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>가상면접 결과</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+</head>
+<style>
+    body {
+        background-color: #F2F7F3;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: auto; /* 스크롤을 추가합니다. */
+    }
+
+    .form-container {
+        text-align: center;
+        width: 90%;
+        max-width: 1200px;
+        padding: 20px;
+        background-color: white;
+        border-radius: 20px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        overflow: auto; /* 스크롤을 추가합니다. */
+        max-height: 90vh; /* 최대 높이 설정 */
+    }
+
+    .wrap {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .button {
+        width: 150px;
+        height: 45px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 2.5px;
+        font-weight: 500;
+        color: #000;
+        background-color: #f3f6f4;
+        border: none;
+        border-radius: 45px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease 0s;
+        cursor: pointer;
+        outline: none;
+        margin-top: 20px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .button:hover {
+        background-color: #6ab1f7;
+        box-shadow: 0px 0px 0px rgba(46, 229, 157, 0.4);
+        color: #fff;
+        transform: translateY(-7px);
+    }
+
+    .image-container {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .image {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
+
+    video {
+        width: 100%;
+        max-width: 800px;
+        height: auto;
+    }
+
+    .test_ready, .test_start, .test_result {
+        flex: 1;
+        margin: 10;
+        font-weight: bold;
+        letter-spacing: 0px;
+        text-align: center;
+        background-color: #f3f6f4 ;
+    }
+
+    .test_ready {
+        color: #b7c2fa;
+        font-size: 30px;
+    }
+
+    .test_start {
+        color: #b7c2fa;
+        font-size: 30px;
+    }
+
+    .test_result {
+        color: #4b47df;
+        font-size: 30px;
+    }
+
+    .results-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .result-box {
+        flex: 1;
+        text-align: center;
+        margin: 0 10px;
+        max-height: 400px; /* 최대 높이 설정 */
+        overflow-y: auto; /* 세로 스크롤 추가 */
+    }
+
+    .username-text {
+        font-size: 24px; /* 글씨 크기 조정 */
+        font-weight: bold; /* 볼드체 */
+    }
+</style>
+<body>
+    <div class="form-container">
+        <div class="wrap" style="text-align: center;">
+            <p class="test_ready">면접 테스트 환경 설정</p>
+            <p class="test_start">테스트 진행</p>
+            <p class="test_result"><U>테스트 결과</U></p>
+        </div>
+        <div>
+            <p class="username-text">면접자: <span id="userName"></span> 님</p>
+            <div class="results-container">
+                <div id="habitCounts" class="result-box"></div>
+                <div id="negativeCounts" class="result-box"></div>
+            </div>
+            <div id="feedback" style="text-align: center; margin-top: 20px;"></div>
+            <div id="fileInputContainer" style="margin-bottom: 10px;">
+                <input type="file" id="wavFileInput" accept=".wav">
+                <p>다운로드 된 WAV 파일을 업로드 해주세요</p>
+                <p>파일을 읽는 과정에서 시간이 소요 될수있습니다.</p>
+            </div>
+            <button onclick="uploadWavFile()" class="button" style="color: #000000;">녹음 파일 업로드</button>
+            <button onclick="window.location.href = '/';" class="button" style="color: #000000;">메인으로 돌아가기</button><br>
+        </div>
+        <div id="faceDetectionResult" style="text-align: center; margin-top: 20px;">
+            <h3>얼굴 인식 정확도</h3>
+            <img id="accuracyPlot" style="max-width: 100%; height: auto;">
+            <p id="accuracySummary"></p>
+            <p id="frameCount"></p> <!-- 추가된 프레임 수 정보 -->
+        </div>
+    </div>
+
+    <script>
+        function uploadWavFile() {
+            var fileInput = document.getElementById('wavFileInput');
+            if (fileInput.files.length > 0) {
+                var file = fileInput.files[0];
+                var formData = new FormData();
+                formData.append('wav_file', file);
+
+                $.ajax({
+                    url: '/upload_wav',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        document.getElementById('fileInputContainer').style.display = 'none'; // 파일 선택 영역 숨기기
+                        displayCounts(response.habit_counts, response.negative_counts);
+                        displayFeedback(response.feedback);
+                    },
+                    error: function(xhr, status, error) {
+                        alert('파일 업로드 중 오류가 발생했습니다.');
+                    }
+                });
+            } else {
+                alert('WAV 파일을 선택해주세요.');
+            }
+        }
+
+        function displayCounts(habitCounts, negativeCounts) {
+            var habitCountsDiv = document.getElementById('habitCounts');
+            var negativeCountsDiv = document.getElementById('negativeCounts');
+            habitCountsDiv.innerHTML = "<h3>습관어 등장 횟수</h3>";
+            for (var word in habitCounts) {
+                habitCountsDiv.innerHTML += "<p>'" + word + "': " + habitCounts[word] + "번</p>";
+            }
+            negativeCountsDiv.innerHTML = "<h3>부정어 등장 횟수</h3>";
+            for (var word in negativeCounts) {
+                negativeCountsDiv.innerHTML += "<p>'" + word + "': " + negativeCounts[word] + "번</p>";
+            }
+        }
+
+        function displayFeedback(feedback) {
+            var feedbackDiv = document.getElementById('feedback');
+            feedbackDiv.innerHTML = "<h3>피드백</h3>" + "<p>" + feedback.replace(/\n/g, "<br>") + "</p>";
+        }
+
+        window.onload = function() {
+            var userInput = localStorage.getItem("userInput");
+            if (userInput) {
+                document.getElementById("userName").innerText = userInput;
+            }
+            getFaceDetectionResult(); // 페이지 로드 시 얼굴 인식 결과 가져오기
+        };
+
+        function getFaceDetectionResult() {
+            $.get('/get_face_detection_result', function(response) {
+                if (response.img_base64) {
+                    document.getElementById('accuracyPlot').src = 'data:image/png;base64,' + response.img_base64;
+                    document.getElementById('accuracySummary').innerText = response.summary;
+                } else {
+                    document.getElementById('accuracySummary').innerText = '얼굴 인식 결과가 없습니다.';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
